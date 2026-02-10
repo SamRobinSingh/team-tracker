@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise Team Tracker - Pro Real-Time</title>
+    <title>Enterprise Team Tracker - Multi-Project Cloud</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
@@ -17,13 +17,9 @@
             --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --border: #334155; --accent: #818cf8; --sidebar: #161e2e;
         }
 
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background-color: var(--bg); color: var(--text);
-            margin: 0; display: flex; height: 100vh; overflow: hidden; transition: 0.3s;
-        }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; transition: 0.3s; }
 
-        /* --- Sidebar Styles --- */
+        /* Sidebar Styles */
         .sidebar { width: 460px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
         .sidebar h3 { margin-top: 0; color: var(--accent); font-size: 1.2rem; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
         .person-block { background: var(--bg); border-radius: 12px; padding: 12px; margin-bottom: 20px; border-left: 5px solid transparent; }
@@ -41,7 +37,7 @@
         .work-history-table th { background: rgba(0,0,0,0.05); padding: 5px; text-align: left; }
         .work-history-table td { padding: 8px 5px; border-top: 1px solid var(--border); vertical-align: middle; }
 
-        /* --- Main Content --- */
+        /* Main Content */
         .main-content { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
         .header { width: 100%; max-width: 1000px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .controls { display: flex; gap: 10px; }
@@ -53,13 +49,9 @@
         .btn-edit { background: #0984e3; padding: 4px 8px; font-size: 11px; margin-right: 4px; }
         .btn-delete { background: var(--danger); padding: 4px 8px; font-size: 11px; }
         .btn-update { background: #e17055; }
+        .btn-project { background: #6c5ce7; margin-bottom: 20px;}
 
-        .form-card {
-            background: var(--card); padding: 20px; border-radius: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 1000px;
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 25px;
-            border: 2px solid transparent; transition: 0.3s;
-        }
+        .form-card { background: var(--card); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 1000px; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 25px; border: 2px solid transparent; transition: 0.3s; }
         .editing-now { border-color: #e17055; background: rgba(225, 112, 85, 0.05); }
 
         input, select { padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; font-size: 13px; }
@@ -71,20 +63,39 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
         .name-tag { padding: 3px 8px; border-radius: 5px; color: white; font-size: 11px; font-weight: bold; }
 
-        /* Calendar Styles */
-        .cal-header { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 15px; border-radius: 15px 15px 0 0; }
+        /* Calendar */
+        .cal-header { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 15px; border-radius: 15px 15px 0 0; border-bottom: 1px solid var(--border); }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border-radius: 0 0 15px 15px; overflow: hidden; }
         .cal-day { min-height: 100px; background: var(--card); padding: 5px; }
         .cal-entry { font-size: 9px; padding: 2px 5px; border-radius: 4px; color: white; margin-top: 3px; display: flex; justify-content: space-between; align-items: center; }
         .cal-status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; background: white; margin-left: 4px;}
-
-        /* Role Badge */
-        #roleInfo { font-size: 12px; color: var(--accent); font-weight: bold; margin-bottom: 10px; }
+        
+        /* Project Modal */
+        #shareModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--card); padding: 30px; border-radius: 20px; width: 500px; max-height: 80vh; overflow-y: auto; }
+        .link-box { background: var(--bg); padding: 10px; border-radius: 8px; font-size: 11px; word-break: break-all; margin: 10px 0; border: 1px solid var(--border); }
     </style>
 </head>
 <body data-theme="dark">
 
+<div id="shareModal">
+    <div class="modal-content">
+        <h3 id="modalTitle">Project Management</h3>
+        <div id="projectCreateArea">
+            <label>Create New Project Name:</label><br>
+            <input type="text" id="newProjName" placeholder="e.g. Marketing-2026" style="width:70%">
+            <button onclick="createNewProject()">Create</button>
+        </div>
+        <hr>
+        <h4>Share Access Links</h4>
+        <p style="font-size: 12px; opacity: 0.7;">Copy these for your team:</p>
+        <div id="linksContainer"></div>
+        <button style="width: 100%; background: #636e72; margin-top: 10px;" onclick="closeModal()">Close</button>
+    </div>
+</div>
+
 <div class="sidebar">
+    <button class="btn-project" onclick="openModal()">📂 Switch/New Project</button>
     <h3>Project Breakdown</h3>
     <div id="statsContainer"></div>
 </div>
@@ -92,11 +103,11 @@
 <div class="main-content">
     <div class="header">
         <div>
-            <h2>Workflow Dashboard</h2>
-            <div id="roleInfo">Role: Loading...</div>
+            <h2 id="displayProjectName">Workflow Dashboard</h2>
+            <div id="roleInfo" style="font-size: 12px; color: var(--accent); font-weight: bold;">Loading...</div>
         </div>
         <div class="controls">
-            <button class="btn-share" onclick="shareTracker()">🔗 Share Tracker</button>
+            <button class="btn-share" onclick="openModal()">🔗 Share Tracker</button>
             <button class="btn-outline" onclick="toggleView()" id="viewBtn">Switch to Calendar</button>
             <button class="btn-outline" onclick="toggleTheme()" id="themeBtn">☀️ Light</button>
         </div>
@@ -131,7 +142,7 @@
         <div id="calendarView" class="hidden">
             <div class="cal-header">
                 <button onclick="changeMonth(-1)">❮</button>
-                <h3 id="currentMonthYear">Month Year</h3>
+                <h3 id="currentMonthYear"></h3>
                 <button onclick="changeMonth(1)">❯</button>
             </div>
             <div class="calendar-grid" id="calendarGrid"></div>
@@ -140,7 +151,7 @@
 </div>
 
 <script>
-    // --- FIREBASE CONFIGURATION ---
+    // --- FIREBASE CONFIG ---
     const firebaseConfig = {
         apiKey: "AIzaSyAniXAhKdfB9Qlhwq6bBfvnqv_rDcsV4ug",
         authDomain: "tracker-work-fa62f.firebaseapp.com",
@@ -152,17 +163,22 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('workflow_data');
 
-    // --- ACCESS CONTROL SYSTEM ---
-    // URL params: ?role=owner OR ?role=editor OR ?role=viewer
+    // --- PROJECT & ROLE LOGIC ---
     const urlParams = new URLSearchParams(window.location.search);
-    const userRole = urlParams.get('role') || 'owner'; 
-    document.getElementById('roleInfo').innerText = `Your Access: ${userRole.toUpperCase()}`;
+    const currentProject = urlParams.get('project') || 'General';
+    const userRole = urlParams.get('role') || 'owner'; // Default to owner if local
 
-    // Disable inputs for viewers
+    document.getElementById('displayProjectName').innerText = `Project: ${currentProject}`;
+    document.getElementById('roleInfo').innerText = `ACCESS: ${userRole.toUpperCase()}`;
+
+    // Database Reference (Namespaced by Project Name)
+    const db = firebase.database().ref('projects/' + currentProject);
+
+    // Permission check
     if (userRole === 'viewer') {
         document.getElementById('inputForm').style.display = 'none';
+        document.getElementById('projectCreateArea').style.display = 'none';
     }
 
     let entries = {}; 
@@ -178,22 +194,21 @@
         'failure': { label: 'Failure', class: 'status-failure', color: '#e17055' }
     };
 
-    // --- REAL-TIME DATA FETCH & STORAGE ---
+    // --- REALTIME DATA LISTENER ---
     db.on('value', (snapshot) => {
         entries = snapshot.val() || {};
         updateUI();
     });
 
     function saveData() {
-        if (userRole === 'viewer') return alert("Viewers cannot edit data.");
-
+        if (userRole === 'viewer') return;
         const entry = {
             date: document.getElementById('dateInput').value,
             name: document.getElementById('nameInput').value.trim(),
             task: document.getElementById('taskInput').value.trim(),
             hours: document.getElementById('hourInput').value,
             status: document.getElementById('statusInput').value,
-            timestamp: Date.now()
+            updatedAt: Date.now()
         };
 
         if (!entry.date || !entry.name || !entry.task || !entry.hours) return alert("Fill all fields");
@@ -209,14 +224,12 @@
     }
 
     function deleteEntry(id) {
-        if (userRole !== 'owner') return alert("Only the OWNER can delete data.");
-        if (confirm("Permanently delete this entry?")) {
-            db.child(id).remove();
-        }
+        if (userRole !== 'owner') return alert("Only Owner can delete records.");
+        if (confirm("Permanently delete this task?")) db.child(id).remove();
     }
 
     function editEntry(id) {
-        if (userRole === 'viewer') return alert("Viewers cannot edit data.");
+        if (userRole === 'viewer') return;
         editID = id;
         const e = entries[id];
         document.getElementById('dateInput').value = e.date;
@@ -225,28 +238,38 @@
         document.getElementById('hourInput').value = e.hours;
         document.getElementById('statusInput').value = e.status;
 
-        document.getElementById('mainBtn').innerText = "Update Entry";
-        document.getElementById('mainBtn').classList.add('btn-update');
+        document.getElementById('mainBtn').innerText = "Update Task";
         document.getElementById('inputForm').classList.add('editing-now');
         document.getElementById('cancelBtn').classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // --- SHARING ACTION ---
-    function shareTracker() {
+    // --- PROJECT MANAGEMENT ---
+    function openModal() {
+        const modal = document.getElementById('shareModal');
+        const container = document.getElementById('linksContainer');
         const baseUrl = window.location.href.split('?')[0];
-        const ownerUrl = `${baseUrl}?role=owner`;
-        const editorUrl = `${baseUrl}?role=editor`;
-        const viewerUrl = `${baseUrl}?role=viewer`;
 
-        const msg = `Share these links:\n\nOWNER: ${ownerUrl}\n\nEDITOR: ${editorUrl}\n\nVIEWER: ${viewerUrl}`;
-        alert(msg);
-        console.log("Sharing Links:", {ownerUrl, editorUrl, viewerUrl});
+        container.innerHTML = `
+            <b>OWNER LINK:</b><div class="link-box">${baseUrl}?project=${currentProject}&role=owner</div>
+            <b>EDITOR LINK:</b><div class="link-box">${baseUrl}?project=${currentProject}&role=editor</div>
+            <b>VIEWER LINK:</b><div class="link-box">${baseUrl}?project=${currentProject}&role=viewer</div>
+        `;
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('shareModal').style.display = 'none'; }
+
+    function createNewProject() {
+        const name = document.getElementById('newProjName').value.trim().replace(/[^a-zA-Z0-9]/g, "-");
+        if (!name) return alert("Enter project name");
+        const baseUrl = window.location.href.split('?')[0];
+        window.location.href = `${baseUrl}?project=${name}&role=owner`;
     }
 
     // --- UI RENDERING ---
     function updateUI() {
-        const dataArr = Object.keys(entries).map(key => ({...entries[key], id: key}));
+        const dataArr = Object.keys(entries).map(k => ({...entries[k], id: k}));
         renderList(dataArr);
         renderCalendar(dataArr);
         renderSidebar(dataArr);
@@ -262,22 +285,19 @@
         });
 
         Object.keys(grouped).forEach(name => {
-            const personColor = getColor(name);
+            const color = getColor(name);
             const block = document.createElement('div');
             block.className = 'person-block';
-            block.style.borderLeftColor = personColor;
+            block.style.borderLeftColor = color;
             block.innerHTML = `
-                <div class="person-header"><span style="color:${personColor}">${name}</span><small>${grouped[name].length} Records</small></div>
+                <div class="person-header"><span style="color:${color}">${name}</span><small>${grouped[name].length} Records</small></div>
                 <table class="work-history-table">
-                    <thead><tr><th>Task</th><th>Status</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>Task</th><th>Status</th><th>✏️</th></tr></thead>
                     <tbody>${grouped[name].map(e => `
                         <tr>
                             <td>${e.task}</td>
                             <td><span class="status-badge ${statusMap[e.status].class}">${statusMap[e.status].label}</span></td>
-                            <td>
-                                <button class="btn-edit" onclick="editEntry('${e.id}')">✏️</button>
-                                ${userRole === 'owner' ? `<button class="btn-delete" onclick="deleteEntry('${e.id}')">🗑️</button>` : ''}
-                            </td>
+                            <td><button class="btn-edit" onclick="editEntry('${e.id}')">✏️</button></td>
                         </tr>`).join('')}
                     </tbody>
                 </table>`;
@@ -287,7 +307,7 @@
 
     function renderList(data) {
         const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = data.sort((a,b) => b.timestamp - a.timestamp).map(e => `
+        tbody.innerHTML = data.sort((a,b) => b.updatedAt - a.updatedAt).map(e => `
             <tr>
                 <td>${e.date}</td>
                 <td><span class="name-tag" style="background:${getColor(e.name)}">${e.name}</span></td>
@@ -295,7 +315,7 @@
                 <td>${e.hours}h</td>
                 <td><span class="status-badge ${statusMap[e.status].class}">${statusMap[e.status].label}</span></td>
                 <td>
-                    ${userRole !== 'viewer' ? `<button class="btn-edit" onclick="editEntry('${e.id}')">Edit</button>` : 'Locked'}
+                    <button class="btn-edit" onclick="editEntry('${e.id}')">Edit</button>
                     ${userRole === 'owner' ? `<button class="btn-delete" onclick="deleteEntry('${e.id}')">Delete</button>` : ''}
                 </td>
             </tr>`).join('');
@@ -303,75 +323,48 @@
 
     function renderCalendar(data) {
         const grid = document.getElementById('calendarGrid');
-        const monthYearLabel = document.getElementById('currentMonthYear');
+        const label = document.getElementById('currentMonthYear');
         grid.innerHTML = '';
-        const year = currentNavDate.getFullYear();
-        const month = currentNavDate.getMonth();
-        monthYearLabel.innerText = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentNavDate);
+        const y = currentNavDate.getFullYear(), m = currentNavDate.getMonth();
+        label.innerText = new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric'}).format(currentNavDate);
 
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         days.forEach(d => {
-            const el = document.createElement('div'); el.className = 'weekday-label';
-            el.style.textAlign = 'center'; el.style.fontSize = '0.7rem'; el.innerText = d;
+            const el = document.createElement('div');
+            el.style = "text-align:center; font-size: 0.7rem; font-weight: bold; padding: 5px; color: var(--accent);";
+            el.innerText = d;
             grid.appendChild(el);
         });
 
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        for (let i = 0; i < firstDay; i++) grid.appendChild(Object.assign(document.createElement('div'), {className: 'cal-day empty'}));
+        const firstDay = new Date(y, m, 1).getDay();
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
+        for (let i = 0; i < firstDay; i++) grid.appendChild(Object.assign(document.createElement('div'), {className:'cal-day', style:'opacity:0.2'}));
 
         for (let i = 1; i <= daysInMonth; i++) {
             const dayDiv = document.createElement('div');
             dayDiv.className = 'cal-day';
-            dayDiv.innerHTML = `<span class="cal-date-num">${i}</span>`;
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            dayDiv.innerHTML = `<span style="font-size:0.7rem"><b>${i}</b></span>`;
+            const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             
-            data.forEach(e => {
-                if(e.date === dateStr) {
-                    const item = document.createElement('div');
-                    item.className = 'cal-entry';
-                    item.style.backgroundColor = getColor(e.name);
-                    item.onclick = () => { if(userRole !== 'viewer') { if(document.getElementById('listView').classList.contains('hidden')) toggleView(); editEntry(e.id); } };
-                    item.innerHTML = `<span>${e.name}</span><span class="cal-status-dot" style="background:${statusMap[e.status].color}"></span>`;
-                    dayDiv.appendChild(item);
-                }
+            data.filter(e => e.date === dateStr).forEach(e => {
+                const item = document.createElement('div');
+                item.className = 'cal-entry';
+                item.style.backgroundColor = getColor(e.name);
+                item.innerHTML = `<span>${e.name}</span><span class="cal-status-dot" style="background:${statusMap[e.status].color}"></span>`;
+                dayDiv.appendChild(item);
             });
             grid.appendChild(dayDiv);
         }
     }
 
     // --- HELPERS ---
-    function getColor(name) {
-        let hash = 0; let str = name.toLowerCase().trim();
-        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        return `hsl(${Math.abs(hash) % 360}, 60%, 50%)`;
-    }
-    function clearInputs() {
-        document.getElementById('nameInput').value = ''; document.getElementById('taskInput').value = '';
-        document.getElementById('hourInput').value = ''; document.getElementById('dateInput').valueAsDate = new Date();
-    }
-    function resetFormUI() {
-        document.getElementById('mainBtn').innerText = "Add Entry";
-        document.getElementById('mainBtn').classList.remove('btn-update');
-        document.getElementById('inputForm').classList.remove('editing-now');
-        document.getElementById('cancelBtn').classList.add('hidden');
-    }
+    function getColor(n) { let h = 0; for(let i=0; i<n.length; i++) h = n.charCodeAt(i) + ((h<<5)-h); return `hsl(${Math.abs(h)%360},60%,50%)`; }
+    function clearInputs() { document.getElementById('nameInput').value=''; document.getElementById('taskInput').value=''; document.getElementById('hourInput').value=''; }
+    function resetFormUI() { document.getElementById('mainBtn').innerText="Add Entry"; document.getElementById('inputForm').classList.remove('editing-now'); document.getElementById('cancelBtn').classList.add('hidden'); }
     function cancelEdit() { editID = null; resetFormUI(); clearInputs(); }
-    function toggleTheme() {
-        const body = document.body;
-        const isDark = body.getAttribute('data-theme') === 'dark';
-        body.setAttribute('data-theme', isDark ? 'light' : 'dark');
-        document.getElementById('themeBtn').innerText = isDark ? '🌙 Dark' : '☀️ Light';
-    }
-    function toggleView() {
-        const lv = document.getElementById('listView'); const cv = document.getElementById('calendarView');
-        const btn = document.getElementById('viewBtn'); const isList = lv.classList.contains('hidden');
-        lv.classList.toggle('hidden', !isList); cv.classList.toggle('hidden', isList);
-        btn.innerText = isList ? "Switch to Calendar" : "Switch to List";
-    }
-    function changeMonth(dir) { currentNavDate.setMonth(currentNavDate.getMonth() + dir); updateUI(); }
-
+    function toggleTheme() { document.body.setAttribute('data-theme', document.body.getAttribute('data-theme')==='dark'?'light':'dark'); }
+    function toggleView() { document.getElementById('listView').classList.toggle('hidden'); document.getElementById('calendarView').classList.toggle('hidden'); }
+    function changeMonth(d) { currentNavDate.setMonth(currentNavDate.getMonth()+d); updateUI(); }
 </script>
-
 </body>
 </html>
