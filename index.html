@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Team Tracker - Pro Real-Time</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg: #f0f2f5; --card: #ffffff; --text: #2d3436; --border: #dfe6e9; --accent: #6c63ff; --sidebar: #ffffff;
+            --status-upcoming: #a29bfe; --status-start: #00b894; --status-process: #fdcb6e; 
+            --status-done: #0984e3; --status-failure: #e17055; --danger: #ff7675;
+        }
+        [data-theme="dark"] {
+            --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --border: #334155; --accent: #818cf8; --sidebar: #161e2e;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg); color: var(--text);
+            margin: 0; display: flex; height: 100vh; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- Sidebar Styles --- */
+        .sidebar { width: 460px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
+        .sidebar h3 { margin-top: 0; color: var(--accent); font-size: 1.2rem; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        .person-block { background: var(--bg); border-radius: 12px; padding: 12px; margin-bottom: 20px; border-left: 5px solid transparent; }
+        .person-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; font-size: 1rem; }
+
+        /* Status Badges */
+        .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; color: white; text-transform: uppercase; white-space: nowrap; }
+        .status-upcoming { background: var(--status-upcoming); }
+        .status-start { background: var(--status-start); }
+        .status-processing { background: var(--status-process); color: #2d3436; }
+        .status-done { background: var(--status-done); }
+        .status-failure { background: var(--status-failure); }
+
+        .work-history-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; background: var(--card); border-radius: 8px; overflow: hidden; }
+        .work-history-table th { background: rgba(0,0,0,0.05); padding: 5px; text-align: left; }
+        .work-history-table td { padding: 8px 5px; border-top: 1px solid var(--border); vertical-align: middle; }
+
+        /* --- Main Content --- */
+        .main-content { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+        .header { width: 100%; max-width: 1000px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .controls { display: flex; gap: 10px; }
+        
+        button { padding: 10px 18px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; background: var(--accent); color: white; transition: 0.2s; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-outline { background: transparent; border: 2px solid var(--accent); color: var(--accent); }
+        .btn-share { background: #00b894; }
+        .btn-edit { background: #0984e3; padding: 4px 8px; font-size: 11px; margin-right: 4px; }
+        .btn-delete { background: var(--danger); padding: 4px 8px; font-size: 11px; }
+        .btn-update { background: #e17055; }
+
+        .form-card {
+            background: var(--card); padding: 20px; border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 1000px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 25px;
+            border: 2px solid transparent; transition: 0.3s;
+        }
+        .editing-now { border-color: #e17055; background: rgba(225, 112, 85, 0.05); }
+
+        input, select { padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; font-size: 13px; }
+
+        .view-container { width: 100%; max-width: 1000px; }
+        .hidden { display: none; }
+        
+        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 15px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .name-tag { padding: 3px 8px; border-radius: 5px; color: white; font-size: 11px; font-weight: bold; }
+
+        /* Calendar Styles */
+        .cal-header { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 15px; border-radius: 15px 15px 0 0; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border-radius: 0 0 15px 15px; overflow: hidden; }
+        .cal-day { min-height: 100px; background: var(--card); padding: 5px; }
+        .cal-entry { font-size: 9px; padding: 2px 5px; border-radius: 4px; color: white; margin-top: 3px; display: flex; justify-content: space-between; align-items: center; }
+        .cal-status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; background: white; margin-left: 4px;}
+
+        /* Role Badge */
+        #roleInfo { font-size: 12px; color: var(--accent); font-weight: bold; margin-bottom: 10px; }
+    </style>
+</head>
+<body data-theme="dark">
+
+<div class="sidebar">
+    <h3>Project Breakdown</h3>
+    <div id="statsContainer"></div>
+</div>
+
+<div class="main-content">
+    <div class="header">
+        <div>
+            <h2>Workflow Dashboard</h2>
+            <div id="roleInfo">Role: Loading...</div>
+        </div>
+        <div class="controls">
+            <button class="btn-share" onclick="shareTracker()">🔗 Share Tracker</button>
+            <button class="btn-outline" onclick="toggleView()" id="viewBtn">Switch to Calendar</button>
+            <button class="btn-outline" onclick="toggleTheme()" id="themeBtn">☀️ Light</button>
+        </div>
+    </div>
+
+    <div class="form-card" id="inputForm">
+        <input type="date" id="dateInput">
+        <input type="text" id="nameInput" placeholder="Person Name">
+        <input type="text" id="taskInput" placeholder="Task Name">
+        <input type="number" id="hourInput" placeholder="Hours">
+        <select id="statusInput">
+            <option value="upcoming">📅 Upcoming</option>
+            <option value="start">🚀 Start</option>
+            <option value="processing">⚙️ Processing</option>
+            <option value="done">✅ Done</option>
+            <option value="failure">❌ Failure</option>
+        </select>
+        <button id="mainBtn" onclick="saveData()">Add Entry</button>
+        <button id="cancelBtn" class="hidden" style="background:#636e72" onclick="cancelEdit()">Cancel</button>
+    </div>
+
+    <div class="view-container">
+        <div id="listView">
+            <table>
+                <thead>
+                    <tr><th>Date</th><th>Name</th><th>Task</th><th>Hours</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <div id="calendarView" class="hidden">
+            <div class="cal-header">
+                <button onclick="changeMonth(-1)">❮</button>
+                <h3 id="currentMonthYear">Month Year</h3>
+                <button onclick="changeMonth(1)">❯</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- FIREBASE CONFIGURATION ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAniXAhKdfB9Qlhwq6bBfvnqv_rDcsV4ug",
+        authDomain: "tracker-work-fa62f.firebaseapp.com",
+        projectId: "tracker-work-fa62f",
+        storageBucket: "tracker-work-fa62f.firebasestorage.app",
+        messagingSenderId: "827983608665",
+        appId: "1:827983608665:web:7c0bd84cce2961e0e5aa48",
+        databaseURL: "https://tracker-work-fa62f-default-rtdb.firebaseio.com"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref('workflow_data');
+
+    // --- ACCESS CONTROL SYSTEM ---
+    // URL params: ?role=owner OR ?role=editor OR ?role=viewer
+    const urlParams = new URLSearchParams(window.location.search);
+    const userRole = urlParams.get('role') || 'owner'; 
+    document.getElementById('roleInfo').innerText = `Your Access: ${userRole.toUpperCase()}`;
+
+    // Disable inputs for viewers
+    if (userRole === 'viewer') {
+        document.getElementById('inputForm').style.display = 'none';
+    }
+
+    let entries = {}; 
+    let editID = null;
+    let currentNavDate = new Date();
+    document.getElementById('dateInput').valueAsDate = new Date();
+
+    const statusMap = {
+        'upcoming': { label: 'Upcoming', class: 'status-upcoming', color: '#a29bfe' },
+        'start': { label: 'Start', class: 'status-start', color: '#00b894' },
+        'processing': { label: 'Processing', class: 'status-processing', color: '#fdcb6e' },
+        'done': { label: 'Done', class: 'status-done', color: '#0984e3' },
+        'failure': { label: 'Failure', class: 'status-failure', color: '#e17055' }
+    };
+
+    // --- REAL-TIME DATA FETCH & STORAGE ---
+    db.on('value', (snapshot) => {
+        entries = snapshot.val() || {};
+        updateUI();
+    });
+
+    function saveData() {
+        if (userRole === 'viewer') return alert("Viewers cannot edit data.");
+
+        const entry = {
+            date: document.getElementById('dateInput').value,
+            name: document.getElementById('nameInput').value.trim(),
+            task: document.getElementById('taskInput').value.trim(),
+            hours: document.getElementById('hourInput').value,
+            status: document.getElementById('statusInput').value,
+            timestamp: Date.now()
+        };
+
+        if (!entry.date || !entry.name || !entry.task || !entry.hours) return alert("Fill all fields");
+
+        if (editID) {
+            db.child(editID).set(entry);
+            editID = null;
+            resetFormUI();
+        } else {
+            db.push(entry);
+        }
+        clearInputs();
+    }
+
+    function deleteEntry(id) {
+        if (userRole !== 'owner') return alert("Only the OWNER can delete data.");
+        if (confirm("Permanently delete this entry?")) {
+            db.child(id).remove();
+        }
+    }
+
+    function editEntry(id) {
+        if (userRole === 'viewer') return alert("Viewers cannot edit data.");
+        editID = id;
+        const e = entries[id];
+        document.getElementById('dateInput').value = e.date;
+        document.getElementById('nameInput').value = e.name;
+        document.getElementById('taskInput').value = e.task;
+        document.getElementById('hourInput').value = e.hours;
+        document.getElementById('statusInput').value = e.status;
+
+        document.getElementById('mainBtn').innerText = "Update Entry";
+        document.getElementById('mainBtn').classList.add('btn-update');
+        document.getElementById('inputForm').classList.add('editing-now');
+        document.getElementById('cancelBtn').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // --- SHARING ACTION ---
+    function shareTracker() {
+        const baseUrl = window.location.href.split('?')[0];
+        const ownerUrl = `${baseUrl}?role=owner`;
+        const editorUrl = `${baseUrl}?role=editor`;
+        const viewerUrl = `${baseUrl}?role=viewer`;
+
+        const msg = `Share these links:\n\nOWNER: ${ownerUrl}\n\nEDITOR: ${editorUrl}\n\nVIEWER: ${viewerUrl}`;
+        alert(msg);
+        console.log("Sharing Links:", {ownerUrl, editorUrl, viewerUrl});
+    }
+
+    // --- UI RENDERING ---
+    function updateUI() {
+        const dataArr = Object.keys(entries).map(key => ({...entries[key], id: key}));
+        renderList(dataArr);
+        renderCalendar(dataArr);
+        renderSidebar(dataArr);
+    }
+
+    function renderSidebar(data) {
+        const container = document.getElementById('statsContainer');
+        container.innerHTML = '';
+        const grouped = {};
+        data.forEach(e => {
+            if (!grouped[e.name]) grouped[e.name] = [];
+            grouped[e.name].push(e);
+        });
+
+        Object.keys(grouped).forEach(name => {
+            const personColor = getColor(name);
+            const block = document.createElement('div');
+            block.className = 'person-block';
+            block.style.borderLeftColor = personColor;
+            block.innerHTML = `
+                <div class="person-header"><span style="color:${personColor}">${name}</span><small>${grouped[name].length} Records</small></div>
+                <table class="work-history-table">
+                    <thead><tr><th>Task</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>${grouped[name].map(e => `
+                        <tr>
+                            <td>${e.task}</td>
+                            <td><span class="status-badge ${statusMap[e.status].class}">${statusMap[e.status].label}</span></td>
+                            <td>
+                                <button class="btn-edit" onclick="editEntry('${e.id}')">✏️</button>
+                                ${userRole === 'owner' ? `<button class="btn-delete" onclick="deleteEntry('${e.id}')">🗑️</button>` : ''}
+                            </td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>`;
+            container.appendChild(block);
+        });
+    }
+
+    function renderList(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = data.sort((a,b) => b.timestamp - a.timestamp).map(e => `
+            <tr>
+                <td>${e.date}</td>
+                <td><span class="name-tag" style="background:${getColor(e.name)}">${e.name}</span></td>
+                <td>${e.task}</td>
+                <td>${e.hours}h</td>
+                <td><span class="status-badge ${statusMap[e.status].class}">${statusMap[e.status].label}</span></td>
+                <td>
+                    ${userRole !== 'viewer' ? `<button class="btn-edit" onclick="editEntry('${e.id}')">Edit</button>` : 'Locked'}
+                    ${userRole === 'owner' ? `<button class="btn-delete" onclick="deleteEntry('${e.id}')">Delete</button>` : ''}
+                </td>
+            </tr>`).join('');
+    }
+
+    function renderCalendar(data) {
+        const grid = document.getElementById('calendarGrid');
+        const monthYearLabel = document.getElementById('currentMonthYear');
+        grid.innerHTML = '';
+        const year = currentNavDate.getFullYear();
+        const month = currentNavDate.getMonth();
+        monthYearLabel.innerText = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentNavDate);
+
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        days.forEach(d => {
+            const el = document.createElement('div'); el.className = 'weekday-label';
+            el.style.textAlign = 'center'; el.style.fontSize = '0.7rem'; el.innerText = d;
+            grid.appendChild(el);
+        });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let i = 0; i < firstDay; i++) grid.appendChild(Object.assign(document.createElement('div'), {className: 'cal-day empty'}));
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'cal-day';
+            dayDiv.innerHTML = `<span class="cal-date-num">${i}</span>`;
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            
+            data.forEach(e => {
+                if(e.date === dateStr) {
+                    const item = document.createElement('div');
+                    item.className = 'cal-entry';
+                    item.style.backgroundColor = getColor(e.name);
+                    item.onclick = () => { if(userRole !== 'viewer') { if(document.getElementById('listView').classList.contains('hidden')) toggleView(); editEntry(e.id); } };
+                    item.innerHTML = `<span>${e.name}</span><span class="cal-status-dot" style="background:${statusMap[e.status].color}"></span>`;
+                    dayDiv.appendChild(item);
+                }
+            });
+            grid.appendChild(dayDiv);
+        }
+    }
+
+    // --- HELPERS ---
+    function getColor(name) {
+        let hash = 0; let str = name.toLowerCase().trim();
+        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        return `hsl(${Math.abs(hash) % 360}, 60%, 50%)`;
+    }
+    function clearInputs() {
+        document.getElementById('nameInput').value = ''; document.getElementById('taskInput').value = '';
+        document.getElementById('hourInput').value = ''; document.getElementById('dateInput').valueAsDate = new Date();
+    }
+    function resetFormUI() {
+        document.getElementById('mainBtn').innerText = "Add Entry";
+        document.getElementById('mainBtn').classList.remove('btn-update');
+        document.getElementById('inputForm').classList.remove('editing-now');
+        document.getElementById('cancelBtn').classList.add('hidden');
+    }
+    function cancelEdit() { editID = null; resetFormUI(); clearInputs(); }
+    function toggleTheme() {
+        const body = document.body;
+        const isDark = body.getAttribute('data-theme') === 'dark';
+        body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        document.getElementById('themeBtn').innerText = isDark ? '🌙 Dark' : '☀️ Light';
+    }
+    function toggleView() {
+        const lv = document.getElementById('listView'); const cv = document.getElementById('calendarView');
+        const btn = document.getElementById('viewBtn'); const isList = lv.classList.contains('hidden');
+        lv.classList.toggle('hidden', !isList); cv.classList.toggle('hidden', isList);
+        btn.innerText = isList ? "Switch to Calendar" : "Switch to List";
+    }
+    function changeMonth(dir) { currentNavDate.setMonth(currentNavDate.getMonth() + dir); updateUI(); }
+
+</script>
+
+</body>
+</html>
