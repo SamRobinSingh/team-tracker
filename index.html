@@ -3,155 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise Team Tracker - Multi-Project Cloud</title>
+    <title>Enterprise Master Tracker | Cloud Edition</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
 
     <style>
         :root {
-            --bg: #f0f2f5; --card: #ffffff; --text: #2d3436; --border: #dfe6e9; --accent: #6c63ff; --sidebar: #ffffff;
-            --status-upcoming: #a29bfe; --status-start: #00b894; --status-process: #fdcb6e; 
+            --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --border: #334155; --accent: #818cf8;
+            --status-upcoming: #a29bfe; --status-start: #00b894; --status-processing: #fdcb6e; 
             --status-done: #0984e3; --status-failure: #e17055; --danger: #ff7675;
         }
-        [data-theme="dark"] {
-            --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --border: #334155; --accent: #818cf8; --sidebar: #161e2e;
+        [data-theme="light"] {
+            --bg: #f0f2f5; --card: #ffffff; --text: #2d3436; --border: #dfe6e9; --accent: #6c63ff;
         }
-
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; transition: 0.3s; }
-
-        /* Sidebar Styles */
-        .sidebar { width: 460px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
-        .sidebar h3 { margin-top: 0; color: var(--accent); font-size: 1.2rem; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
-        .person-block { background: var(--bg); border-radius: 12px; padding: 12px; margin-bottom: 20px; border-left: 5px solid transparent; }
-        .person-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; font-size: 1rem; }
-
-        /* Status Badges */
-        .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; color: white; text-transform: uppercase; white-space: nowrap; }
-        .status-upcoming { background: var(--status-upcoming); }
-        .status-start { background: var(--status-start); }
-        .status-processing { background: var(--status-process); color: #2d3436; }
-        .status-done { background: var(--status-done); }
-        .status-failure { background: var(--status-failure); }
-
-        .work-history-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; background: var(--card); border-radius: 8px; overflow: hidden; }
-        .work-history-table th { background: rgba(0,0,0,0.05); padding: 5px; text-align: left; }
-        .work-history-table td { padding: 8px 5px; border-top: 1px solid var(--border); vertical-align: middle; }
-
-        /* Main Content */
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; }
+        #loginScreen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 10000; }
+        .login-card { background: var(--card); padding: 40px; border-radius: 25px; text-align: center; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .google-btn { background: white; color: #444; padding: 12px 24px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; gap: 10px; margin: 20px auto; }
+        #mainApp { display: none; height: 100vh; }
+        .sidebar { width: 350px; background: var(--card); border-right: 1px solid var(--border); padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
         .main-content { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
-        .header { width: 100%; max-width: 1000px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .controls { display: flex; gap: 10px; }
-        
-        button { padding: 10px 18px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; background: var(--accent); color: white; transition: 0.2s; }
-        button:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-outline { background: transparent; border: 2px solid var(--accent); color: var(--accent); }
-        .btn-share { background: #00b894; }
-        .btn-edit { background: #0984e3; padding: 4px 8px; font-size: 11px; margin-right: 4px; }
-        .btn-delete { background: var(--danger); padding: 4px 8px; font-size: 11px; }
-        .btn-update { background: #e17055; }
-        .btn-project { background: #6c5ce7; margin-bottom: 20px;}
-
-        .form-card { background: var(--card); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 1000px; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 25px; border: 2px solid transparent; transition: 0.3s; }
-        .editing-now { border-color: #e17055; background: rgba(225, 112, 85, 0.05); }
-
-        input, select { padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; font-size: 13px; }
-
-        .view-container { width: 100%; max-width: 1000px; }
-        .hidden { display: none; }
-        
+        .form-card { background: var(--card); padding: 20px; border-radius: 20px; width: 100%; max-width: 1000px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 25px; border: 1px solid var(--border); }
+        input, select, button { padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; }
+        button { cursor: pointer; background: var(--accent); color: white; font-weight: bold; border: none; }
+        .project-item { padding: 10px; background: var(--bg); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; font-size: 14px; }
+        .project-item.active { background: var(--accent); color: white; }
         table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 15px; overflow: hidden; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        .name-tag { padding: 3px 8px; border-radius: 5px; color: white; font-size: 11px; font-weight: bold; }
-
-        /* Calendar */
-        .cal-header { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 15px; border-radius: 15px 15px 0 0; border-bottom: 1px solid var(--border); }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border-radius: 0 0 15px 15px; overflow: hidden; }
-        .cal-day { min-height: 100px; background: var(--card); padding: 5px; }
-        .cal-entry { font-size: 9px; padding: 2px 5px; border-radius: 4px; color: white; margin-top: 3px; display: flex; justify-content: space-between; align-items: center; }
-        .cal-status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; background: white; margin-left: 4px;}
-        
-        /* Project Modal */
-        #shareModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: var(--card); padding: 30px; border-radius: 20px; width: 500px; max-height: 80vh; overflow-y: auto; }
-        .link-box { background: var(--bg); padding: 10px; border-radius: 8px; font-size: 11px; word-break: break-all; margin: 10px 0; border: 1px solid var(--border); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+        .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; text-transform: uppercase; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); width: 100%; max-width: 1000px; border-radius: 15px; overflow: hidden; }
+        .cal-day { min-height: 80px; background: var(--card); padding: 5px; font-size: 12px; }
+        .cal-entry { font-size: 9px; padding: 2px 4px; border-radius: 3px; color: white; margin-top: 2px; }
+        .hidden { display: none; }
+        #modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 9999; }
+        .modal-content { background: var(--card); padding: 30px; border-radius: 20px; width: 400px; text-align: center; }
     </style>
 </head>
 <body data-theme="dark">
 
-<div id="shareModal">
-    <div class="modal-content">
-        <h3 id="modalTitle">Project Management</h3>
-        <div id="projectCreateArea">
-            <label>Create New Project Name:</label><br>
-            <input type="text" id="newProjName" placeholder="e.g. Marketing-2026" style="width:70%">
-            <button onclick="createNewProject()">Create</button>
-        </div>
-        <hr>
-        <h4>Share Access Links</h4>
-        <p style="font-size: 12px; opacity: 0.7;">Copy these for your team:</p>
-        <div id="linksContainer"></div>
-        <button style="width: 100%; background: #636e72; margin-top: 10px;" onclick="closeModal()">Close</button>
+<div id="loginScreen">
+    <div class="login-card">
+        <h1 style="color:var(--accent)">Tracker Pro</h1>
+        <p>Use your GitHub Live Link to Sign In</p>
+        <button class="google-btn" onclick="googleLogin()">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
+            Login with Google
+        </button>
     </div>
 </div>
 
-<div class="sidebar">
-    <button class="btn-project" onclick="openModal()">📂 Switch/New Project</button>
-    <h3>Project Breakdown</h3>
-    <div id="statsContainer"></div>
-</div>
-
-<div class="main-content">
-    <div class="header">
-        <div>
-            <h2 id="displayProjectName">Workflow Dashboard</h2>
-            <div id="roleInfo" style="font-size: 12px; color: var(--accent); font-weight: bold;">Loading...</div>
+<div id="mainApp">
+    <div class="sidebar">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+            <img id="uPic" style="width:35px; border-radius:50%">
+            <div id="uName" style="font-weight:bold; font-size:14px">User</div>
         </div>
-        <div class="controls">
-            <button class="btn-share" onclick="openModal()">🔗 Share Tracker</button>
-            <button class="btn-outline" onclick="toggleView()" id="viewBtn">Switch to Calendar</button>
-            <button class="btn-outline" onclick="toggleTheme()" id="themeBtn">☀️ Light</button>
-        </div>
+        <button onclick="showCreateUI()" style="background:#6c5ce7; padding:12px; margin-bottom:20px;">🚀 Create New Board</button>
+        <h3>All Projects</h3>
+        <div id="projectList"></div>
+        <button onclick="logout()" style="background:none; color:var(--danger); border:1px solid var(--danger); margin-top:auto;">Logout</button>
     </div>
 
-    <div class="form-card" id="inputForm">
-        <input type="date" id="dateInput">
-        <input type="text" id="nameInput" placeholder="Person Name">
-        <input type="text" id="taskInput" placeholder="Task Name">
-        <input type="number" id="hourInput" placeholder="Hours">
-        <select id="statusInput">
-            <option value="upcoming">📅 Upcoming</option>
-            <option value="start">🚀 Start</option>
-            <option value="processing">⚙️ Processing</option>
-            <option value="done">✅ Done</option>
-            <option value="failure">❌ Failure</option>
-        </select>
-        <button id="mainBtn" onclick="saveData()">Add Entry</button>
-        <button id="cancelBtn" class="hidden" style="background:#636e72" onclick="cancelEdit()">Cancel</button>
-    </div>
+    <div class="main-content">
+        <div style="width:100%; max-width:1000px; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 id="projTitle" style="margin:0">Dashboard</h2>
+            <div style="display:flex; gap:10px;">
+                <button onclick="showShareUI()" style="background:#00b894">🔗 Share</button>
+                <button onclick="toggleView()" id="viewBtn" style="background:transparent; color:var(--accent); border:1px solid var(--accent);">Calendar View</button>
+            </div>
+        </div>
 
-    <div class="view-container">
-        <div id="listView">
+        <div class="form-card" id="inputForm">
+            <input type="date" id="dateInput">
+            <input type="text" id="nameInput" placeholder="Name">
+            <input type="text" id="taskInput" placeholder="Task description">
+            <input type="number" id="hourInput" placeholder="Hrs">
+            <select id="statusInput">
+                <option value="upcoming">Upcoming</option>
+                <option value="start">Start</option>
+                <option value="processing">Processing</option>
+                <option value="done">Done</option>
+                <option value="failure">Failure</option>
+            </select>
+            <button id="mainBtn" onclick="saveData()">Add Entry</button>
+        </div>
+
+        <div id="listView" style="width:100%; max-width:1000px;">
             <table>
-                <thead>
-                    <tr><th>Date</th><th>Name</th><th>Task</th><th>Hours</th><th>Status</th><th>Actions</th></tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
+                <thead><tr><th>Date</th><th>Name</th><th>Task</th><th>Hrs</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="tableRows"></tbody>
             </table>
         </div>
-
-        <div id="calendarView" class="hidden">
-            <div class="cal-header">
-                <button onclick="changeMonth(-1)">❮</button>
-                <h3 id="currentMonthYear"></h3>
-                <button onclick="changeMonth(1)">❯</button>
-            </div>
-            <div class="calendar-grid" id="calendarGrid"></div>
+        <div id="calendarView" class="hidden" style="width:100%; max-width:1000px;">
+            <div id="calendarGrid" class="calendar-grid"></div>
         </div>
     </div>
 </div>
 
+<div id="modalOverlay"><div class="modal-content" id="modalUI"></div></div>
+
 <script>
-    // --- FIREBASE CONFIG ---
     const firebaseConfig = {
         apiKey: "AIzaSyAniXAhKdfB9Qlhwq6bBfvnqv_rDcsV4ug",
         authDomain: "tracker-work-fa62f.firebaseapp.com",
@@ -163,208 +115,109 @@
     };
 
     firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
 
-    // --- PROJECT & ROLE LOGIC ---
     const urlParams = new URLSearchParams(window.location.search);
-    const currentProject = urlParams.get('project') || 'General';
-    const userRole = urlParams.get('role') || 'owner'; // Default to owner if local
+    const activeProject = urlParams.get('project') || 'General';
+    const activeRole = urlParams.get('role') || 'owner';
 
-    document.getElementById('displayProjectName').innerText = `Project: ${currentProject}`;
-    document.getElementById('roleInfo').innerText = `ACCESS: ${userRole.toUpperCase()}`;
-
-    // Database Reference (Namespaced by Project Name)
-    const db = firebase.database().ref('projects/' + currentProject);
-
-    // Permission check
-    if (userRole === 'viewer') {
-        document.getElementById('inputForm').style.display = 'none';
-        document.getElementById('projectCreateArea').style.display = 'none';
+    function googleLogin() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(e => alert("Please open the site via HTTPS (GitHub Link) to login. Error: " + e.message));
     }
+    function logout() { auth.signOut().then(() => window.location.href = window.location.origin + window.location.pathname); }
 
-    let entries = {}; 
-    let editID = null;
-    let currentNavDate = new Date();
-    document.getElementById('dateInput').valueAsDate = new Date();
-
-    const statusMap = {
-        'upcoming': { label: 'Upcoming', class: 'status-upcoming', color: '#a29bfe' },
-        'start': { label: 'Start', class: 'status-start', color: '#00b894' },
-        'processing': { label: 'Processing', class: 'status-processing', color: '#fdcb6e' },
-        'done': { label: 'Done', class: 'status-done', color: '#0984e3' },
-        'failure': { label: 'Failure', class: 'status-failure', color: '#e17055' }
-    };
-
-    // --- REALTIME DATA LISTENER ---
-    db.on('value', (snapshot) => {
-        entries = snapshot.val() || {};
-        updateUI();
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'flex';
+            document.getElementById('uPic').src = user.photoURL;
+            document.getElementById('uName').innerText = user.displayName;
+            initApp();
+        }
     });
 
+    function initApp() {
+        document.getElementById('projTitle').innerText = activeProject;
+        if(activeRole === 'viewer') document.getElementById('inputForm').style.display = 'none';
+
+        db.ref('projects').on('value', snap => {
+            const list = document.getElementById('projectList'); list.innerHTML = '';
+            Object.keys(snap.val() || {}).forEach(name => {
+                const div = document.createElement('div');
+                div.className = `project-item ${name === activeProject ? 'active' : ''}`;
+                div.innerHTML = `📁 ${name}`;
+                div.onclick = () => window.location.href = `?project=${name}&role=${activeRole}`;
+                list.appendChild(div);
+            });
+        });
+
+        db.ref('projects/' + activeProject).on('value', snap => {
+            render(Object.keys(snap.val() || {}).map(k => ({...snap.val()[k], id: k})));
+        });
+    }
+
     function saveData() {
-        if (userRole === 'viewer') return;
-        const entry = {
+        const d = {
             date: document.getElementById('dateInput').value,
-            name: document.getElementById('nameInput').value.trim(),
-            task: document.getElementById('taskInput').value.trim(),
+            name: document.getElementById('nameInput').value || auth.currentUser.displayName,
+            task: document.getElementById('taskInput').value,
             hours: document.getElementById('hourInput').value,
             status: document.getElementById('statusInput').value,
-            updatedAt: Date.now()
+            ts: Date.now()
         };
-
-        if (!entry.date || !entry.name || !entry.task || !entry.hours) return alert("Fill all fields");
-
-        if (editID) {
-            db.child(editID).set(entry);
-            editID = null;
-            resetFormUI();
-        } else {
-            db.push(entry);
-        }
-        clearInputs();
+        if(!d.task) return alert("Task required");
+        db.ref(`projects/${activeProject}`).push(d);
+        document.getElementById('taskInput').value = '';
     }
 
-    function deleteEntry(id) {
-        if (userRole !== 'owner') return alert("Only Owner can delete records.");
-        if (confirm("Permanently delete this task?")) db.child(id).remove();
-    }
-
-    function editEntry(id) {
-        if (userRole === 'viewer') return;
-        editID = id;
-        const e = entries[id];
-        document.getElementById('dateInput').value = e.date;
-        document.getElementById('nameInput').value = e.name;
-        document.getElementById('taskInput').value = e.task;
-        document.getElementById('hourInput').value = e.hours;
-        document.getElementById('statusInput').value = e.status;
-
-        document.getElementById('mainBtn').innerText = "Update Task";
-        document.getElementById('inputForm').classList.add('editing-now');
-        document.getElementById('cancelBtn').classList.remove('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // --- PROJECT MANAGEMENT ---
-    function openModal() {
-        const modal = document.getElementById('shareModal');
-        const container = document.getElementById('linksContainer');
-        const baseUrl = window.location.href.split('?')[0];
-
-        container.innerHTML = `
-            <b>OWNER LINK:</b><div class="link-box">${baseUrl}?project=${currentProject}&role=owner</div>
-            <b>EDITOR LINK:</b><div class="link-box">${baseUrl}?project=${currentProject}&role=editor</div>
-            <b>VIEWER LINK:</b><div class="link-box">${baseUrl}?project=${currentProject}&role=viewer</div>
-        `;
-        modal.style.display = 'flex';
-    }
-
-    function closeModal() { document.getElementById('shareModal').style.display = 'none'; }
-
-    function createNewProject() {
-        const name = document.getElementById('newProjName').value.trim().replace(/[^a-zA-Z0-9]/g, "-");
-        if (!name) return alert("Enter project name");
-        const baseUrl = window.location.href.split('?')[0];
-        window.location.href = `${baseUrl}?project=${name}&role=owner`;
-    }
-
-    // --- UI RENDERING ---
-    function updateUI() {
-        const dataArr = Object.keys(entries).map(k => ({...entries[k], id: k}));
-        renderList(dataArr);
-        renderCalendar(dataArr);
-        renderSidebar(dataArr);
-    }
-
-    function renderSidebar(data) {
-        const container = document.getElementById('statsContainer');
-        container.innerHTML = '';
-        const grouped = {};
-        data.forEach(e => {
-            if (!grouped[e.name]) grouped[e.name] = [];
-            grouped[e.name].push(e);
-        });
-
-        Object.keys(grouped).forEach(name => {
-            const color = getColor(name);
-            const block = document.createElement('div');
-            block.className = 'person-block';
-            block.style.borderLeftColor = color;
-            block.innerHTML = `
-                <div class="person-header"><span style="color:${color}">${name}</span><small>${grouped[name].length} Records</small></div>
-                <table class="work-history-table">
-                    <thead><tr><th>Task</th><th>Status</th><th>✏️</th></tr></thead>
-                    <tbody>${grouped[name].map(e => `
-                        <tr>
-                            <td>${e.task}</td>
-                            <td><span class="status-badge ${statusMap[e.status].class}">${statusMap[e.status].label}</span></td>
-                            <td><button class="btn-edit" onclick="editEntry('${e.id}')">✏️</button></td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>`;
-            container.appendChild(block);
-        });
-    }
-
-    function renderList(data) {
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = data.sort((a,b) => b.updatedAt - a.updatedAt).map(e => `
+    function render(data) {
+        const tbody = document.getElementById('tableRows');
+        tbody.innerHTML = data.sort((a,b)=>b.ts-a.ts).map(e => `
             <tr>
                 <td>${e.date}</td>
-                <td><span class="name-tag" style="background:${getColor(e.name)}">${e.name}</span></td>
-                <td>${e.task}</td>
-                <td>${e.hours}h</td>
-                <td><span class="status-badge ${statusMap[e.status].class}">${statusMap[e.status].label}</span></td>
-                <td>
-                    <button class="btn-edit" onclick="editEntry('${e.id}')">Edit</button>
-                    ${userRole === 'owner' ? `<button class="btn-delete" onclick="deleteEntry('${e.id}')">Delete</button>` : ''}
-                </td>
+                <td><span style="background:${getColor(e.name)}; padding:3px 8px; border-radius:5px; font-weight:bold; color:white;">${e.name}</span></td>
+                <td>${e.task}</td><td>${e.hours}h</td>
+                <td><span class="status-badge" style="background:var(--status-${e.status})">${e.status}</span></td>
+                <td>${activeRole === 'owner' ? `<button onclick="del('${e.id}')" style="background:var(--danger)">Del</button>` : ''}</td>
             </tr>`).join('');
+        renderCal(data);
     }
 
-    function renderCalendar(data) {
-        const grid = document.getElementById('calendarGrid');
-        const label = document.getElementById('currentMonthYear');
-        grid.innerHTML = '';
-        const y = currentNavDate.getFullYear(), m = currentNavDate.getMonth();
-        label.innerText = new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric'}).format(currentNavDate);
-
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        days.forEach(d => {
-            const el = document.createElement('div');
-            el.style = "text-align:center; font-size: 0.7rem; font-weight: bold; padding: 5px; color: var(--accent);";
-            el.innerText = d;
-            grid.appendChild(el);
-        });
-
-        const firstDay = new Date(y, m, 1).getDay();
-        const daysInMonth = new Date(y, m + 1, 0).getDate();
-        for (let i = 0; i < firstDay; i++) grid.appendChild(Object.assign(document.createElement('div'), {className:'cal-day', style:'opacity:0.2'}));
-
-        for (let i = 1; i <= daysInMonth; i++) {
-            const dayDiv = document.createElement('div');
-            dayDiv.className = 'cal-day';
-            dayDiv.innerHTML = `<span style="font-size:0.7rem"><b>${i}</b></span>`;
-            const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-            
+    function renderCal(data) {
+        const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
+        for(let i=1; i<=31; i++) {
+            const d = document.createElement('div'); d.className = 'cal-day'; d.innerHTML = `<b>${i}</b>`;
+            const dateStr = `2026-02-${String(i).padStart(2,'0')}`;
             data.filter(e => e.date === dateStr).forEach(e => {
-                const item = document.createElement('div');
-                item.className = 'cal-entry';
-                item.style.backgroundColor = getColor(e.name);
-                item.innerHTML = `<span>${e.name}</span><span class="cal-status-dot" style="background:${statusMap[e.status].color}"></span>`;
-                dayDiv.appendChild(item);
+                const en = document.createElement('div'); en.className = 'cal-entry'; en.style.background = getColor(e.name);
+                en.innerHTML = e.name; d.appendChild(en);
             });
-            grid.appendChild(dayDiv);
+            grid.appendChild(d);
         }
     }
 
-    // --- HELPERS ---
-    function getColor(n) { let h = 0; for(let i=0; i<n.length; i++) h = n.charCodeAt(i) + ((h<<5)-h); return `hsl(${Math.abs(h)%360},60%,50%)`; }
-    function clearInputs() { document.getElementById('nameInput').value=''; document.getElementById('taskInput').value=''; document.getElementById('hourInput').value=''; }
-    function resetFormUI() { document.getElementById('mainBtn').innerText="Add Entry"; document.getElementById('inputForm').classList.remove('editing-now'); document.getElementById('cancelBtn').classList.add('hidden'); }
-    function cancelEdit() { editID = null; resetFormUI(); clearInputs(); }
-    function toggleTheme() { document.body.setAttribute('data-theme', document.body.getAttribute('data-theme')==='dark'?'light':'dark'); }
+    function showCreateUI() {
+        document.getElementById('modalOverlay').style.display = 'flex';
+        document.getElementById('modalUI').innerHTML = `<h3>New Board</h3><input id="nbn" placeholder="Name" style="width:80%; margin:15px;"><br><button onclick="cb()">Create</button>`;
+    }
+    function cb() {
+        const n = document.getElementById('nbn').value.trim();
+        if(n) { db.ref(`projects/${n}/init`).set(Date.now()); window.location.href = `?project=${n}&role=owner`; }
+    }
+    function showShareUI() {
+        const b = window.location.origin + window.location.pathname;
+        document.getElementById('modalOverlay').style.display = 'flex';
+        document.getElementById('modalUI').innerHTML = `<h3>Links</h3><p>Editor:</p><div style="font-size:10px; background:#000; padding:10px;">${b}?project=${activeProject}&role=editor</div><button onclick="closeM()" style="margin-top:10px;">Close</button>`;
+    }
+
+    function del(id) { if(confirm("Delete?")) db.ref(`projects/${activeProject}/${id}`).remove(); }
+    function closeM() { document.getElementById('modalOverlay').style.display = 'none'; }
+    function getColor(n) { let h=0; for(let i=0; i<n.length; i++) h=n.charCodeAt(i)+((h<<5)-h); return `hsl(${Math.abs(h)%360},60%,45%)`; }
     function toggleView() { document.getElementById('listView').classList.toggle('hidden'); document.getElementById('calendarView').classList.toggle('hidden'); }
-    function changeMonth(d) { currentNavDate.setMonth(currentNavDate.getMonth()+d); updateUI(); }
+    function toggleTheme() { document.body.setAttribute('data-theme', document.body.getAttribute('data-theme')==='dark'?'light':'dark'); }
+    document.getElementById('dateInput').valueAsDate = new Date();
 </script>
 </body>
 </html>
